@@ -1,0 +1,93 @@
+Kolekcja users.
+{
+  "_id": ObjectId("..."),
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "age": 30,
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zip": "10001"
+  }
+}
+
+Kolekcja products
+{
+  "_id": ObjectId("..."),
+  "name": "Laptop",
+  "category": "Electronics",
+  "price": 1200.00,
+  "stock": 50
+}
+
+Kolekcja orders.
+ {
+  "_id": ObjectId("..."),
+  "user_id": ObjectId("..."),  // odwołanie do użytkownika
+  "products": [
+    { "product_id": ObjectId("..."), "quantity": 1 },
+    { "product_id": ObjectId("..."), "quantity": 2 }
+  ],
+  "order_date": ISODate("2024-10-30"),
+  "total": 1700.00
+}
+
+
+
+
+Szukam pracowników z Nowego Yorku.
+   db.users.find({ "address.city": "New York" });
+
+Szukam pracownika który ma cenę wyższą niż 1000 jednostek. 
+
+   db.products.find({ "price": { $gt: 1000 } });
+
+Dodaje nowego pracownika.
+
+  db.users.insertOne({
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "age": 28,
+  "address": {
+    "street": "456 Park Ave",
+    "city": "Los Angeles",
+    "zip": "90001"
+  }
+});
+
+Aktualizuje cenę produktów z kategori "Electronics" o 10%
+
+  db.products.updateMany(
+  { "category": "Electronics" },
+  { $mul: { "price": 1.10 } }
+
+);
+
+Szukam użytkowników, którzy mają więcej niż jedno zamówienie
+
+  db.orders.aggregate([
+  { $group: { _id: "$user_id", orderCount: { $sum: 1 } } },
+  { $match: { orderCount: { $gt: 1 } } },
+  { $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "_id",
+      as: "user_info"
+  }
+  },
+  { $project: { "user_info.name": 1, "user_info.email": 1, orderCount: 1 } }
+]);
+
+Dodaje nowe zamówienie dla użytkownika o podanym adresie e-mail
+
+let user = db.users.findOne({ "email": "jane.smith@example.com" });
+
+
+db.orders.insertOne({
+  "user_id": user._id,
+  "products": [
+    { "product_id": ObjectId("..."), "quantity": 1 }
+  ],
+  "order_date": new Date(),
+  "total": 300.00
+});
