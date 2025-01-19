@@ -1,0 +1,83 @@
+CREATE TABLE leki (
+    id_leku UUID PRIMARY KEY,           
+    nazwa TEXT,                        
+    kategoria TEXT,                     
+    producent TEXT,                    
+    sklad SET<TEXT>,                  
+    data_rejestracji DATE,             
+    cena DECIMAL,                     
+    ilosc_magazyn INT,               
+    kraj_produkcji TEXT,               
+    wymagania_recepta BOOLEAN,          
+    data_ostatniej_dostawy TIMESTAMP   
+) WITH CLUSTERING ORDER BY (kategoria ASC);
+
+
+
+CREATE TABLE zamowienia (
+    id_zamowienia UUID PRIMARY KEY,    
+    id_pacjenta UUID,                   
+    id_leku UUID,                       
+    data_zamowienia TIMESTAMP,         
+    status TEXT,                       
+    ilosc INT,                          
+    cena_za_sztuke DECIMAL,             
+    koszt_laczny DECIMAL STATIC,        
+    adres_dostawy TEXT                 
+) WITH CLUSTERING ORDER BY (data_zamowienia DESC);
+
+
+
+CREATE TABLE pacjenci (
+    id_pacjenta UUID PRIMARY KEY,      
+    imie TEXT,                          
+    nazwisko TEXT,                    
+    wiek INT,                          
+    historia_zamowien LIST<UUID>,       
+    alergie SET<TEXT>,                
+    przypisane_leki MAP<UUID, TEXT>     --
+);
+
+
+
+
+
+
+1. Pobieram wszystkie leki z określonej kategorii , posortowane według ceny.
+
+
+SELECT * FROM leki WHERE kategoria = 'Antybiotyk' ORDER BY cena ASC;
+
+2. Szukam pacjentów , którzy mają przypisane leki zawierające określony składnik (np. Paracetamol).
+cql
+
+
+SELECT id_pacjenta, imie, nazwisko FROM pacjenci 
+WHERE przypisane_leki CONTAINS 'Paracetamol';
+
+3. Szukam 10 ostatnich zamówień pacjenta z danymi o statusie i kosztach.
+
+
+SELECT * FROM zamowienia WHERE id_pacjenta = [ID_PACJENTA] LIMIT 10;
+
+4. Znajduje lek, które wymagają recepty i mają więcej niż 100 sztuk w magazynie.
+
+SELECT * FROM leki WHERE wymagania_recepta = true AND ilosc_magazyn > 100 ALLOW FILTERING;
+
+
+5. Pobieram całkowity koszt wszystkich zamówień konkretnego pacjenta.
+
+SELECT SUM(koszt_laczny) FROM zamowienia WHERE id_pacjenta = [ID_PACJENTA];
+
+
+6. Znajduje najnowsze leki dodane do bazy dla konkretnego producenta.
+
+SELECT * FROM leki WHERE producent = 'Pfizer' ORDER BY data_rejestracji DESC LIMIT 5;
+
+7. Wyświetlam dane leku, który miał największą sprzedaż w ostatnich 30 dniach.
+
+
+SELECT id_leku, SUM(ilosc) AS total_sprzedane FROM zamowienia
+WHERE data_zamowienia > dateOf(now()) -  2592000000
+GROUP BY id_leku
+ORDER BY total_sprzedane DESC LIMIT 1;
